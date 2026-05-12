@@ -179,3 +179,69 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+.anomaly-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 18px;
+}
+
+.anomaly-box h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.anomaly-box p {
+  margin: 0;
+  color: #94a3b8;
+}
+
+.anomaly-box strong {
+  font-size: 22px;
+}
+
+.anomaly-normal {
+  border-color: #22c55e;
+}
+
+.anomaly-normal strong {
+  color: #22c55e;
+}
+
+.anomaly-anomaly_detected {
+  border-color: #ef4444;
+}
+
+.anomaly-anomaly_detected strong {
+  color: #ef4444;
+}
+
+.anomaly-insufficient_data {
+  border-color: #f59e0b;
+}
+
+.anomaly-insufficient_data strong {
+  color: #f59e0b;
+}
+
+.anomaly-unknown {
+  border-color: #64748b;
+}
+
+.anomaly-unknown strong {
+  color: #94a3b8;
+}
+
+.anomaly-list li {
+  margin-bottom: 12px;
+}
+
+.anomaly-list span {
+  color: #94a3b8;
+}

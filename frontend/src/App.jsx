@@ -20,6 +20,11 @@ function App() {
     message: "Loading health status...",
     issues: [],
   });
+  const [anomaly, setAnomaly] = useState({
+    status: "unknown",
+    message: "Loading anomaly status...",
+    anomalies: [],
+  });
 
   async function fetchMetrics() {
     try {
@@ -54,9 +59,26 @@ function App() {
     }
   }
 
+  async function fetchAnomalies() {
+    try {
+      const response = await fetch(`${API_URL}/anomalies?limit=50`);
+      const data = await response.json();
+
+      setAnomaly(data);
+    } catch (error) {
+      console.error("Failed to fetch anomalies:", error);
+      setAnomaly({
+        status: "unknown",
+        message: "Failed to fetch anomaly data",
+        anomalies: [],
+      });
+    }
+  }
+
   async function refreshDashboard() {
     await fetchMetrics();
     await fetchHealth();
+    await fetchAnomalies();
   }
 
   useEffect(() => {
@@ -74,29 +96,15 @@ function App() {
       <section className="header">
         <div>
           <h1>ServerGuard AI</h1>
-          <p>Simple server monitoring dashboard</p>
+          <p>Simple server monitoring dashboard with anomaly detection</p>
         </div>
 
         <div className={`status-card status-${health.status}`}>
-          <span>Status</span>
+          <span>Health Status</span>
           <strong>{formatStatus(health.status)}</strong>
           <p>{health.message}</p>
         </div>
       </section>
-
-      {health.issues.length > 0 && (
-        <section className="alert-box">
-          <h2>Active Alerts</h2>
-
-          <ul>
-            {health.issues.map((issue, index) => (
-              <li key={index} className={`alert-${issue.level}`}>
-                {issue.message}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
 
       <section className="cards">
         <MetricCard
@@ -114,6 +122,46 @@ function App() {
           value={latest ? latest.disk_percent : null}
         />
       </section>
+
+      {health.issues.length > 0 && (
+        <section className="alert-box">
+          <h2>Threshold Alerts</h2>
+
+          <ul>
+            {health.issues.map((issue, index) => (
+              <li key={index} className={`alert-${issue.level}`}>
+                {issue.message}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section className={`anomaly-box anomaly-${anomaly.status}`}>
+        <div>
+          <h2>Anomaly Detection</h2>
+          <p>{anomaly.message}</p>
+        </div>
+
+        <strong>{formatAnomalyStatus(anomaly.status)}</strong>
+      </section>
+
+      {anomaly.anomalies.length > 0 && (
+        <section className="alert-box anomaly-list">
+          <h2>Recent Anomalies</h2>
+
+          <ul>
+            {anomaly.anomalies.map((item, index) => (
+              <li key={index}>
+                <strong>{item.metric}</strong> — {item.value}% | Z-score:{" "}
+                {item.z_score}
+                <br />
+                <span>{item.message}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="chart-card">
         <h2>CPU Usage</h2>
@@ -170,6 +218,17 @@ function formatStatus(status) {
     healthy: "Healthy",
     warning: "Warning",
     critical: "Critical",
+    unknown: "Unknown",
+  };
+
+  return statusMap[status] || "Unknown";
+}
+
+function formatAnomalyStatus(status) {
+  const statusMap = {
+    normal: "Normal",
+    anomaly_detected: "Anomaly",
+    insufficient_data: "Learning",
     unknown: "Unknown",
   };
 
