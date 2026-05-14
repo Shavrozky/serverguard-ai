@@ -25,6 +25,19 @@ function App() {
     message: "Loading anomaly status...",
     anomalies: [],
   });
+  
+  const [anomalyHistory, setAnomalyHistory] = useState([]);
+
+  async function fetchAnomalyHistory() {
+  try {
+    const response = await fetch(`${API_URL}/anomalies/history?limit=10`);
+    const data = await response.json();
+
+    setAnomalyHistory(data);
+  } catch (error) {
+    console.error("Failed to fetch anomaly history:", error);
+  }
+}
 
   async function fetchMetrics() {
     try {
@@ -79,6 +92,7 @@ function App() {
     await fetchMetrics();
     await fetchHealth();
     await fetchAnomalies();
+    await fetchAnomalyHistory();
   }
 
   useEffect(() => {
@@ -162,6 +176,27 @@ function App() {
           </ul>
         </section>
       )}
+
+      <section className="history-box">
+        <h2>Anomaly History</h2>
+
+        {anomalyHistory.length === 0 ? (
+          <p>No anomaly history yet.</p>
+        ) : (
+          <ul>
+            {anomalyHistory.map((item) => (
+              <li key={item.id}>
+                <div>
+                  <strong>{item.metric}</strong> — {item.value}% | Z-score:{" "}
+                  {item.z_score}
+                </div>
+                <span>{item.message}</span>
+                <small>{new Date(item.created_at).toLocaleString()}</small>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="chart-card">
         <h2>CPU Usage</h2>

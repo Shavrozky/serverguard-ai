@@ -245,3 +245,48 @@ body {
 .anomaly-list span {
   color: #94a3b8;
 }
+
+.history-box {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 18px;
+}
+
+.history-box h2 {
+  margin: 0 0 16px;
+  font-size: 20px;
+}
+
+.history-box p {
+  margin: 0;
+  color: #94a3b8;
+}
+
+.history-box ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.history-box li {
+  padding: 14px 0;
+  border-bottom: 1px solid #1f2937;
+}
+
+.history-box li:last-child {
+  border-bottom: none;
+}
+
+.history-box span {
+  display: block;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.history-box small {
+  display: block;
+  color: #64748b;
+  margin-top: 6px;
+}
