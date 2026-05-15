@@ -4,7 +4,9 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database import Base, engine, SessionLocal
-from models import Metric
+from models import Metric, Anomaly
+from anomaly import detect_anomalies
+from datetime import datetime, timedelta
 
 Base.metadata.create_all(bind=engine)
 
@@ -17,7 +19,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 class MetricCreate(BaseModel):
     cpu_percent: float
@@ -86,7 +87,6 @@ def root():
     return {
         "message": "ServerGuard AI API is running"
     }
-
 
 @app.post("/metrics")
 def create_metric(payload: MetricCreate, db: Session = Depends(get_db)):
@@ -173,3 +173,103 @@ def get_health(db: Session = Depends(get_db)):
             "created_at": metric.created_at,
         }
     }
+
+def save_anomalies(db: Session, anomalies: list[dict]):
+    saved_anomalies = []
+    cooldown_time = datetime.utcnow() - timedelta(seconds=60)
+
+    for item in anomalies:
+        existing_anomaly = (
+            db.query(Anomaly)
+            .filter(
+                Anomaly.metric_name == item["metric"],
+                Anomaly.created_at >= cooldown_time,
+            )
+            .order_by(Anomaly.created_at.desc())
+            .first()
+        )
+
+        if existing_anomaly:
+            continue
+
+        anomaly = Anomaly(
+            metric_name=item["metric"],
+            metric_value=item["value"],
+            z_score=item["z_score"],
+            message=item["message"],
+        )
+
+        db.add(anomaly)
+        saved_anomalies.append(anomaly)
+
+    db.commit()
+
+    for anomaly in saved_anomalies:
+        db.refresh(anomaly)
+
+    return saved_anomalies
+
+@app.get("/anomalies")
+def get_anomalies(limit: int = 50, db: Session = Depends(get_db)):
+    metrics = (
+        db.query(Metric)
+        .order_by(Metric.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    metrics = list(reversed(metrics))
+
+    result = detect_anomalies(metrics)
+
+    latest = metrics[-1] if metrics else None
+
+    saved = []
+
+    if result["status"] == "anomaly_detected":
+        saved_anomalies = save_anomalies(db, result["anomalies"])
+
+        saved = [
+            {
+                "id": anomaly.id,
+                "metric": anomaly.metric_name,
+                "value": anomaly.metric_value,
+                "z_score": anomaly.z_score,
+                "message": anomaly.message,
+                "created_at": anomaly.created_at,
+            }
+            for anomaly in saved_anomalies
+        ]
+
+    return {
+        **result,
+        "saved": saved,
+        "latest": None if latest is None else {
+            "id": latest.id,
+            "cpu_percent": latest.cpu_percent,
+            "ram_percent": latest.ram_percent,
+            "disk_percent": latest.disk_percent,
+            "created_at": latest.created_at,
+        },
+    }
+
+@app.get("/anomalies/history")
+def get_anomaly_history(limit: int = 20, db: Session = Depends(get_db)):
+    anomalies = (
+        db.query(Anomaly)
+        .order_by(Anomaly.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        {
+            "id": anomaly.id,
+            "metric": anomaly.metric_name,
+            "value": anomaly.metric_value,
+            "z_score": anomaly.z_score,
+            "message": anomaly.message,
+            "created_at": anomaly.created_at,
+        }
+        for anomaly in anomalies
+    ]
